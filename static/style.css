@@ -1,0 +1,410 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+    background-color: #f4f6f8;
+    color: #333;
+    padding: 24px;
+    line-height: 1.5;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+header {
+    margin-bottom: 24px;
+    border-bottom: 2px solid #e1e4e8;
+    padding-bottom: 12px;
+}
+
+h1 {
+    font-size: 26px;
+    color: #1a202c;
+}
+
+.card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.card h2 {
+    font-size: 18px;
+    margin-bottom: 16px;
+    color: #2d3748;
+}
+
+.form-group {
+    margin-bottom: 14px;
+}
+
+.form-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.form-row .form-group {
+    flex: 1;
+    min-width: 220px;
+}
+
+label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    font-size: 14px;
+    color: #4a5568;
+}
+
+input[type="text"],
+input[type="date"],
+select,
+textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
+    font-size: 14px;
+    background-color: #fff;
+}
+
+input[type="text"]:focus,
+input[type="date"]:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: #3182ce;
+}
+
+textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+/* Grupo de botones tipo píldora (Pills) para opciones siempre visibles */
+.pill-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.pill-btn {
+    flex: 1;
+    min-width: 70px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    background-color: #edf2f7;
+    color: #4a5568;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s ease-in-out;
+}
+
+.pill-btn:hover {
+    background-color: #e2e8f0;
+}
+
+.pill-btn.active {
+    color: #fff;
+    background-color: #3182ce;
+    border-color: #2b6cb0;
+    box-shadow: 0 0 0 1px #3182ce;
+}
+
+/* Colores específicos para prioridad */
+.pill-btn.prio-baja.active {
+    background-color: #bee3f8;
+    color: #2c5282;
+    border-color: #3182ce;
+}
+
+.pill-btn.prio-media.active {
+    background-color: #feebc8;
+    color: #7b341e;
+    border-color: #dd6b20;
+}
+
+.pill-btn.prio-alta.active {
+    background-color: #fed7d7;
+    color: #9b2c2c;
+    border-color: #e53e3e;
+}
+
+/* Botones rápidos de fecha */
+.date-input-container {
+    position: relative;
+}
+
+.quick-dates {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+
+.quick-date-btn {
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    background-color: #edf2f7;
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
+    color: #4a5568;
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+}
+
+.quick-date-btn:hover {
+    background-color: #e2e8f0;
+    color: #2d3748;
+}
+
+/* Calendario desplegable en el DOM (sin ventanas nativas) */
+.custom-calendar-popover {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 50;
+    margin-top: 4px;
+    background: #fff;
+    border: 1px solid #cbd5e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    padding: 12px;
+    width: 280px;
+    display: none;
+}
+
+.cal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.cal-nav-btn {
+    background: none;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 2px 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    text-align: center;
+    font-size: 12px;
+}
+
+.cal-day-name {
+    font-weight: bold;
+    color: #718096;
+    padding: 4px 0;
+}
+
+.cal-day {
+    padding: 6px 0;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+.cal-day:hover:not(.disabled) {
+    background-color: #ebf8ff;
+    border-color: #3182ce;
+}
+
+.cal-day.disabled {
+    color: #cbd5e0;
+    cursor: not-allowed;
+    background-color: #f7fafc;
+}
+
+.cal-day.today {
+    font-weight: bold;
+    border-color: #3182ce;
+}
+
+.cal-day.selected {
+    background-color: #3182ce;
+    color: #fff;
+}
+
+.btn {
+    display: inline-block;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.btn-primary {
+    background-color: #3182ce;
+    color: #fff;
+}
+.btn-primary:hover {
+    background-color: #2b6cb0;
+}
+
+.btn-success {
+    background-color: #38a169;
+    color: #fff;
+}
+.btn-success:hover {
+    background-color: #2f855a;
+}
+
+.btn-secondary {
+    background-color: #718096;
+    color: #fff;
+}
+.btn-secondary:hover {
+    background-color: #4a5568;
+}
+
+.btn-danger {
+    background-color: #e53e3e;
+    color: #fff;
+}
+.btn-danger:hover {
+    background-color: #c53030;
+}
+
+.btn-sm {
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.alert {
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    display: none;
+}
+
+.alert-error {
+    background-color: #fed7d7;
+    border: 1px solid #feb2b2;
+    color: #9b2c2c;
+}
+
+.alert-success {
+    background-color: #c6f6d5;
+    border: 1px solid #9ae6b4;
+    color: #22543d;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+th, td {
+    padding: 12px 10px;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+th {
+    background-color: #edf2f7;
+    color: #4a5568;
+    font-weight: 600;
+}
+
+.badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-alta {
+    background-color: #fed7d7;
+    color: #9b2c2c;
+}
+
+.badge-media {
+    background-color: #feebc8;
+    color: #7b341e;
+}
+
+.badge-baja {
+    background-color: #bee3f8;
+    color: #2c5282;
+}
+
+.badge-completada {
+    background-color: #c6f6d5;
+    color: #22543d;
+}
+
+.badge-pendiente {
+    background-color: #edf2f7;
+    color: #4a5568;
+}
+
+.actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal {
+    background: #fff;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    padding: 24px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+}

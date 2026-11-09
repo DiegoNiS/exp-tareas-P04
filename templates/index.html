@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Tareas</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Gestión de Tareas</h1>
+        </header>
+
+        <!-- Mensajes de alerta para errores y confirmaciones -->
+        <div id="alert-error" class="alert alert-error" role="alert"></div>
+        <div id="alert-success" class="alert alert-success" role="alert"></div>
+
+        <!-- 2. Crear una tarea -->
+        <section class="card">
+            <h2>Nueva Tarea</h2>
+            <form id="form-crear">
+                <div class="form-group">
+                    <label for="crear-titulo">Título *</label>
+                    <input type="text" id="crear-titulo" name="titulo" placeholder="Entre 3 y 100 caracteres" required>
+                </div>
+                <div class="form-group">
+                    <label for="crear-descripcion">Descripción</label>
+                    <textarea id="crear-descripcion" name="descripcion" placeholder="Opcional, máximo 500 caracteres"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Prioridad</label>
+                        <input type="hidden" id="crear-prioridad" name="prioridad" value="media">
+                        <div class="pill-group" id="crear-prio-group">
+                            <button type="button" class="pill-btn prio-baja" onclick="setPrioridadCrear('baja')">Baja</button>
+                            <button type="button" class="pill-btn prio-media active" onclick="setPrioridadCrear('media')">Media</button>
+                            <button type="button" class="pill-btn prio-alta" onclick="setPrioridadCrear('alta')">Alta</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="crear-fecha-limite">Fecha límite</label>
+                        <div class="date-input-container">
+                            <div style="display: flex; gap: 6px;">
+                                <input type="date" id="crear-fecha-limite" name="fecha_limite" placeholder="AAAA-MM-DD">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="toggleCalendar('cal-crear-popover', 'crear-fecha-limite')">📅 Calendario</button>
+                            </div>
+                            <div class="quick-dates">
+                                <button type="button" class="quick-date-btn" onclick="setQuickDate('crear-fecha-limite', 0)">Hoy</button>
+                                <button type="button" class="quick-date-btn" onclick="setQuickDate('crear-fecha-limite', 1)">Mañana</button>
+                                <button type="button" class="quick-date-btn" onclick="setQuickDate('crear-fecha-limite', 7)">+7 días</button>
+                                <button type="button" class="quick-date-btn" onclick="setQuickDate('crear-fecha-limite', 30)">+30 días</button>
+                                <button type="button" class="quick-date-btn" onclick="clearDate('crear-fecha-limite')">Sin fecha</button>
+                            </div>
+                            <!-- Calendario desplegable en pantalla -->
+                            <div id="cal-crear-popover" class="custom-calendar-popover"></div>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 10px;">Crear Tarea</button>
+            </form>
+        </section>
+
+        <!-- 3. Buscar y filtrar -->
+        <section class="card">
+            <h2>Buscar y Filtrar</h2>
+            <form id="form-buscar" class="form-row" onsubmit="event.preventDefault(); cargarTareas();">
+                <div class="form-group" style="flex: 2;">
+                    <label for="filtro-q">Buscar por texto</label>
+                    <input type="text" id="filtro-q" placeholder="Buscar en título o descripción...">
+                </div>
+                <div class="form-group" style="flex: 2;">
+                    <label>Estado</label>
+                    <input type="hidden" id="filtro-estado" value="">
+                    <div class="pill-group" id="filtro-estado-group">
+                        <button type="button" class="pill-btn active" onclick="setFiltroEstado('')">Todos</button>
+                        <button type="button" class="pill-btn" onclick="setFiltroEstado('pendiente')">Pendientes</button>
+                        <button type="button" class="pill-btn" onclick="setFiltroEstado('completada')">Completadas</button>
+                    </div>
+                </div>
+                <div class="form-group" style="align-self: flex-end; display: flex; gap: 8px;">
+                    <button type="submit" class="btn btn-primary">Filtrar</button>
+                    <button type="button" class="btn btn-secondary" onclick="limpiarFiltros()">Limpiar</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- 1. Ver lista de tareas con título, prioridad, fecha límite y estado -->
+        <section class="card">
+            <h2>Lista de Tareas</h2>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Título</th>
+                            <th>Descripción</th>
+                            <th>Prioridad</th>
+                            <th>Fecha Límite</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-tareas-body">
+                        <tr>
+                            <td colspan="7" style="text-align: center; color: #718096;">Cargando tareas...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- 4. Modal para editar tarea pendiente -->
+    <div id="modal-editar" class="modal-backdrop">
+        <div class="modal">
+            <h2>Editar Tarea</h2>
+            <div id="modal-error" class="alert alert-error" style="display: none; margin-bottom: 12px;"></div>
+            <form id="form-editar">
+                <input type="hidden" id="editar-id">
+                <div class="form-group">
+                    <label for="editar-titulo">Título *</label>
+                    <input type="text" id="editar-titulo" required>
+                </div>
+                <div class="form-group">
+                    <label for="editar-descripcion">Descripción</label>
+                    <textarea id="editar-descripcion"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Prioridad</label>
+                        <input type="hidden" id="editar-prioridad" value="media">
+                        <div class="pill-group" id="editar-prio-group">
+                            <button type="button" class="pill-btn prio-baja" onclick="setPrioridadEditar('baja')">Baja</button>
+                            <button type="button" class="pill-btn prio-media" onclick="setPrioridadEditar('media')">Media</button>
+                            <button type="button" class="pill-btn prio-alta" onclick="setPrioridadEditar('alta')">Alta</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="editar-fecha-limite">Fecha límite</label>
+                        <div class="date-input-container">
+                            <div style="display: flex; gap: 6px;">
+                                <input type="date" id="editar-fecha-limite" placeholder="AAAA-MM-DD">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="toggleCalendar('cal-editar-popover', 'editar-fecha-limite')">📅 Calendario</button>
+                            </div>
+                            <div class="quick-dates">
+                                <button type="button" class="quick-date-btn" onclick="setQuickDate('editar-fecha-limite', 0)">Hoy</button>
+                                <button type="button" class="quick-date-btn" onclick="setQuickDate('editar-fecha-limite', 1)">Mañana</button>
+                                <button type="button" class="quick-date-btn" onclick="setQuickDate('editar-fecha-limite', 7)">+7 días</button>
+                                <button type="button" class="quick-date-btn" onclick="setQuickDate('editar-fecha-limite', 30)">+30 días</button>
+                                <button type="button" class="quick-date-btn" onclick="clearDate('editar-fecha-limite')">Sin fecha</button>
+                            </div>
+                            <!-- Calendario desplegable en pantalla para editar -->
+                            <div id="cal-editar-popover" class="custom-calendar-popover"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="cerrarModalEditar()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Funciones para manejo de alertas
+        function mostrarError(mensaje) {
+            const el = document.getElementById("alert-error");
+            el.textContent = mensaje;
+            el.style.display = "block";
+            document.getElementById("alert-success").style.display = "none";
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function mostrarExito(mensaje) {
+            const el = document.getElementById("alert-success");
+            el.textContent = mensaje;
+            el.style.display = "block";
+            document.getElementById("alert-error").style.display = "none";
+            setTimeout(() => {
+                el.style.display = "none";
+            }, 4000);
+        }
+
+        function limpiarAlertas() {
+            document.getElementById("alert-error").style.display = "none";
+            document.getElementById("alert-success").style.display = "none";
+        }
+
+        // Selección de Prioridad (Crear)
+        function setPrioridadCrear(prio) {
+            document.getElementById("crear-prioridad").value = prio;
+            const botones = document.querySelectorAll("#crear-prio-group .pill-btn");
+            botones.forEach(btn => {
+                btn.classList.toggle("active", btn.classList.contains(`prio-${prio}`));
+            });
+        }
+
+        // Selección de Prioridad (Editar)
+        function setPrioridadEditar(prio) {
+            document.getElementById("editar-prioridad").value = prio;
+            const botones = document.querySelectorAll("#editar-prio-group .pill-btn");
+            botones.forEach(btn => {
+                btn.classList.toggle("active", btn.classList.contains(`prio-${prio}`));
+            });
+        }
+
+        // Selección de Estado de Filtro
+        function setFiltroEstado(estado) {
+            document.getElementById("filtro-estado").value = estado;
+            const botones = document.querySelectorAll("#filtro-estado-group .pill-btn");
+            botones.forEach(btn => {
+                const esActivo = (estado === "" && btn.textContent.trim() === "Todos") ||
+                                 (estado === "pendiente" && btn.textContent.trim() === "Pendientes") ||
+                                 (estado === "completada" && btn.textContent.trim() === "Completadas");
+                btn.classList.toggle("active", esActivo);
+            });
+            cargarTareas();
+        }
+
+        // Asignación rápida de fecha (Hoy, Mañana, +X días)
+        function setQuickDate(inputId, diasOffset) {
+            const d = new Date();
+            d.setDate(d.getDate() + diasOffset);
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            document.getElementById(inputId).value = `${yyyy}-${mm}-${dd}`;
+            cerrarTodosLosCalendarios();
+        }
+
+        function clearDate(inputId) {
+            document.getElementById(inputId).value = "";
+            cerrarTodosLosCalendarios();
+        }
+
+        // Calendario desplegable en el DOM (sin necesidad de popups nativos del navegador)
+        let calState = {
+            targetInputId: null,
+            targetContainerId: null,
+            currentYear: new Date().getFullYear(),
+            currentMonth: new Date().getMonth()
+        };
+
+        function toggleCalendar(containerId, inputId) {
+            const container = document.getElementById(containerId);
+            if (container.style.display === "block" && calState.targetContainerId === containerId) {
+                container.style.display = "none";
+                return;
+            }
+            cerrarTodosLosCalendarios();
+
+            calState.targetInputId = inputId;
+            calState.targetContainerId = containerId;
+
+            const existingVal = document.getElementById(inputId).value;
+            if (existingVal && /^\d{4}-\d{2}-\d{2}$/.test(existingVal)) {
+                const parts = existingVal.split("-");
+                calState.currentYear = parseInt(parts[0], 10);
+                calState.currentMonth = parseInt(parts[1], 10) - 1;
+            } else {
+                const now = new Date();
+                calState.currentYear = now.getFullYear();
+                calState.currentMonth = now.getMonth();
+            }
+
+            renderCalendar();
+            container.style.display = "block";
+        }
+
+        function cerrarTodosLosCalendarios() {
+            document.querySelectorAll(".custom-calendar-popover").forEach(el => el.style.display = "none");
+        }
+
+        function changeCalendarMonth(offset) {
+            calState.currentMonth += offset;
+            if (calState.currentMonth > 11) {
+                calState.currentMonth = 0;
+                calState.currentYear++;
+            } else if (calState.currentMonth < 0) {
+                calState.currentMonth = 11;
+                calState.currentYear--;
+            }
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            if (!calState.targetContainerId) return;
+            const container = document.getElementById(calState.targetContainerId);
+            const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+            const hoy = new Date();
+            hoy.setHours(0,0,0,0);
+
+            const inputVal = document.getElementById(calState.targetInputId).value;
+
+            const year = calState.currentYear;
+            const month = calState.currentMonth;
+
+            // Primer día del mes (0=domingo, ajustar a 0=lunes)
+            const primerDia = new Date(year, month, 1);
+            let diaSemana = primerDia.getDay();
+            diaSemana = diaSemana === 0 ? 6 : diaSemana - 1;
+
+            const ultimoDia = new Date(year, month + 1, 0).getDate();
+
+            let html = `
+                <div class="cal-header">
+                    <button type="button" class="cal-nav-btn" onclick="changeCalendarMonth(-1)">&lt;</button>
+                    <span>${meses[month]} ${year}</span>
+                    <button type="button" class="cal-nav-btn" onclick="changeCalendarMonth(1)">&gt;</button>
+                </div>
+                <div class="cal-grid">
+                    <div class="cal-day-name">Lu</div>
+                    <div class="cal-day-name">Ma</div>
+                    <div class="cal-day-name">Mi</div>
+                    <div class="cal-day-name">Ju</div>
+                    <div class="cal-day-name">Vi</div>
+                    <div class="cal-day-name">Sá</div>
+                    <div class="cal-day-name">Do</div>
+            `;
+
+            for (let i = 0; i < diaSemana; i++) {
+                html += `<div></div>`;
+            }
+
+            for (let dia = 1; dia <= ultimoDia; dia++) {
+                const fechaDia = new Date(year, month, dia);
+                const esPasado = fechaDia < hoy;
+                const esHoy = fechaDia.getTime() === hoy.getTime();
+                const strDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+                const esSeleccionado = inputVal === strDate;
+
+                let clases = "cal-day";
+                if (esPasado) clases += " disabled";
+                if (esHoy) clases += " today";
+                if (esSeleccionado) clases += " selected";
+
+                if (esPasado) {
+                    html += `<div class="${clases}">${dia}</div>`;
+                } else {
+                    html += `<div class="${clases}" onclick="selectDate('${strDate}')">${dia}</div>`;
+                }
+            }
+
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        function selectDate(dateStr) {
+            if (calState.targetInputId) {
+                document.getElementById(calState.targetInputId).value = dateStr;
+            }
+            cerrarTodosLosCalendarios();
+        }
+
+        // Clic fuera del calendario para cerrarlo
+        document.addEventListener("click", function(e) {
+            if (!e.target.closest(".date-input-container")) {
+                cerrarTodosLosCalendarios();
+            }
+        });
+
+        // 1. Cargar y listar tareas (R6, R7, R14)
+        async function cargarTareas() {
+            limpiarAlertas();
+            const q = document.getElementById("filtro-q").value.trim();
+            const estado = document.getElementById("filtro-estado").value;
+
+            const params = new URLSearchParams();
+            if (q) params.append("q", q);
+            if (estado) params.append("estado", estado);
+
+            const url = "/api/tareas" + (params.toString() ? "?" + params.toString() : "");
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                if (!res.ok) {
+                    mostrarError(data.error || "Error al cargar tareas");
+                    return;
+                }
+
+                const tbody = document.getElementById("tabla-tareas-body");
+                tbody.innerHTML = "";
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #718096; padding: 20px;">No hay tareas que coincidan con la búsqueda.</td></tr>';
+                    return;
+                }
+
+                data.forEach(t => {
+                    const tr = document.createElement("tr");
+
+                    const tdId = document.createElement("td");
+                    tdId.textContent = t.id;
+                    tr.appendChild(tdId);
+
+                    const tdTitulo = document.createElement("td");
+                    tdTitulo.textContent = t.titulo;
+                    tdTitulo.style.fontWeight = "600";
+                    tr.appendChild(tdTitulo);
+
+                    const tdDesc = document.createElement("td");
+                    tdDesc.textContent = t.descripcion || "-";
+                    tdDesc.style.color = t.descripcion ? "#2d3748" : "#a0aec0";
+                    tr.appendChild(tdDesc);
+
+                    const tdPrio = document.createElement("td");
+                    const badgePrio = document.createElement("span");
+                    badgePrio.className = `badge badge-${t.prioridad}`;
+                    badgePrio.textContent = t.prioridad.toUpperCase();
+                    tdPrio.appendChild(badgePrio);
+                    tr.appendChild(tdPrio);
+
+                    const tdFecha = document.createElement("td");
+                    tdFecha.textContent = t.fecha_limite || "Sin fecha";
+                    tr.appendChild(tdFecha);
+
+                    const tdEstado = document.createElement("td");
+                    const badgeEstado = document.createElement("span");
+                    badgeEstado.className = `badge ${t.completada ? 'badge-completada' : 'badge-pendiente'}`;
+                    badgeEstado.textContent = t.completada ? "Completada" : "Pendiente";
+                    tdEstado.appendChild(badgeEstado);
+                    tr.appendChild(tdEstado);
+
+                    const tdAcciones = document.createElement("td");
+                    const divAcciones = document.createElement("div");
+                    divAcciones.className = "actions";
+
+                    // Botón Completar
+                    if (!t.completada) {
+                        const btnCompletar = document.createElement("button");
+                        btnCompletar.className = "btn btn-success btn-sm";
+                        btnCompletar.textContent = "Completar";
+                        btnCompletar.onclick = () => completarTarea(t.id);
+                        divAcciones.appendChild(btnCompletar);
+                    }
+
+                    // Botón Editar (solo tareas pendientes)
+                    if (!t.completada) {
+                        const btnEditar = document.createElement("button");
+                        btnEditar.className = "btn btn-primary btn-sm";
+                        btnEditar.textContent = "Editar";
+                        btnEditar.onclick = () => abrirModalEditar(t);
+                        divAcciones.appendChild(btnEditar);
+                    }
+
+                    // Botón Eliminar
+                    const btnEliminar = document.createElement("button");
+                    btnEliminar.className = "btn btn-danger btn-sm";
+                    btnEliminar.textContent = "Eliminar";
+                    btnEliminar.onclick = () => eliminarTarea(t.id);
+                    divAcciones.appendChild(btnEliminar);
+
+                    tdAcciones.appendChild(divAcciones);
+                    tr.appendChild(tdAcciones);
+
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                mostrarError("Error de conexión al cargar tareas");
+            }
+        }
+
+        function limpiarFiltros() {
+            document.getElementById("filtro-q").value = "";
+            setFiltroEstado("");
+        }
+
+        // 2. Crear tarea (POST /api/tareas)
+        document.getElementById("form-crear").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            limpiarAlertas();
+            cerrarTodosLosCalendarios();
+
+            const titulo = document.getElementById("crear-titulo").value;
+            const descripcion = document.getElementById("crear-descripcion").value;
+            const prioridad = document.getElementById("crear-prioridad").value;
+            const fecha_limite = document.getElementById("crear-fecha-limite").value || null;
+
+            const payload = {
+                titulo: titulo,
+                descripcion: descripcion,
+                prioridad: prioridad,
+                fecha_limite: fecha_limite
+            };
+
+            try {
+                const res = await fetch("/api/tareas", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    mostrarError(data.error || "Error al crear la tarea");
+                    return;
+                }
+
+                document.getElementById("form-crear").reset();
+                setPrioridadCrear("media");
+                document.getElementById("crear-fecha-limite").value = "";
+                mostrarExito("Tarea creada exitosamente");
+                cargarTareas();
+            } catch (err) {
+                mostrarError("Error de red al crear la tarea");
+            }
+        });
+
+        // 5. Completar tarea (POST /api/tareas/<id>/completar)
+        async function completarTarea(id) {
+            limpiarAlertas();
+            try {
+                const res = await fetch(`/api/tareas/${id}/completar`, {
+                    method: "POST"
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    mostrarError(data.error || "Error al completar la tarea");
+                    return;
+                }
+                mostrarExito("Tarea marcada como completada");
+                cargarTareas();
+            } catch (err) {
+                mostrarError("Error de red al completar la tarea");
+            }
+        }
+
+        // 6. Eliminar tarea (DELETE /api/tareas/<id>)
+        async function eliminarTarea(id) {
+            if (!confirm("¿Seguro que deseas eliminar esta tarea?")) {
+                return;
+            }
+            limpiarAlertas();
+            try {
+                const res = await fetch(`/api/tareas/${id}`, {
+                    method: "DELETE"
+                });
+                if (!res.ok) {
+                    const data = await res.json();
+                    mostrarError(data.error || "Error al eliminar la tarea");
+                    return;
+                }
+                mostrarExito("Tarea eliminada correctamente");
+                cargarTareas();
+            } catch (err) {
+                mostrarError("Error de red al eliminar la tarea");
+            }
+        }
+
+        // 4. Modal para editar tarea (PUT /api/tareas/<id>)
+        function abrirModalEditar(tarea) {
+            document.getElementById("modal-error").style.display = "none";
+            document.getElementById("editar-id").value = tarea.id;
+            document.getElementById("editar-titulo").value = tarea.titulo;
+            document.getElementById("editar-descripcion").value = tarea.descripcion || "";
+            setPrioridadEditar(tarea.prioridad);
+            document.getElementById("editar-fecha-limite").value = tarea.fecha_limite || "";
+            document.getElementById("modal-editar").style.display = "flex";
+        }
+
+        function cerrarModalEditar() {
+            cerrarTodosLosCalendarios();
+            document.getElementById("modal-editar").style.display = "none";
+        }
+
+        document.getElementById("form-editar").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            const id = document.getElementById("editar-id").value;
+            const titulo = document.getElementById("editar-titulo").value;
+            const descripcion = document.getElementById("editar-descripcion").value;
+            const prioridad = document.getElementById("editar-prioridad").value;
+            const fecha_limite = document.getElementById("editar-fecha-limite").value || null;
+
+            const modalErr = document.getElementById("modal-error");
+            modalErr.style.display = "none";
+
+            const payload = {
+                titulo: titulo,
+                descripcion: descripcion,
+                prioridad: prioridad,
+                fecha_limite: fecha_limite
+            };
+
+            try {
+                const res = await fetch(`/api/tareas/${id}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    modalErr.textContent = data.error || "Error al editar la tarea";
+                    modalErr.style.display = "block";
+                    return;
+                }
+
+                cerrarModalEditar();
+                mostrarExito("Tarea actualizada exitosamente");
+                cargarTareas();
+            } catch (err) {
+                modalErr.textContent = "Error de red al editar la tarea";
+                modalErr.style.display = "block";
+            }
+        });
+
+        // Inicializar al cargar
+        window.addEventListener("DOMContentLoaded", () => {
+            setPrioridadCrear("media");
+            cargarTareas();
+        });
+    </script>
+</body>
+</html>
